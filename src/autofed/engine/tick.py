@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from autofed.accounting.transaction import TransactionType
 from autofed.agents.backend import AgentBackend
+from autofed.markets.clearing import sort_sales_by_market_priority, try_execute_sale
 from autofed.world.production import run_batch_production
 
 if TYPE_CHECKING:
@@ -35,28 +36,23 @@ class TickEngine:
         for pu in plan.price_updates:
             world.apply_price_updates({pu.good_id: pu.price})
 
-        for w in plan.wages:
-            world.ledger.post_transfer(
-                tick,
-                w.firm_id,
-                w.household_id,
-                w.amount,
-                memo=f"wage {w.household_id}",
-                tx_type=TransactionType.WAGE,
-            )
+        # Goods market before wages (revenue then payroll).
+        ordered_sales = sort_sales_by_market_priority(plan.sales, world.good_categories)
+        for s in ordered_sales:
+            try_execute_sale(world, tick, s)
 
-        for s in plan.sales:
-            total = s.quantity * s.unit_price
-            world.ledger.post_transfer(
-                tick,
-                s.buyer_id,
-                s.seller_id,
-                total,
-                memo=f"purchase {s.good_id} x{s.quantity}",
-                tx_type=TransactionType.PURCHASE,
-                good_id=s.good_id,
-            )
-            world.add_inventory(s.seller_id, s.good_id, -s.quantity)
+        for w in plan.wages:
+            firm_cash = world.ledger.cash.get(w.firm_id, 0.0)
+            paid = min(w.amount, max(0.0, firm_cash))
+            if paid > 1e-9:
+                world.ledger.post_transfer(
+                    tick,
+                    w.firm_id,
+                    w.household_id,
+                    paid,
+                    memo=f"wage {w.household_id}",
+                    tx_type=TransactionType.WAGE,
+                )
 
         for d in plan.dividends:
             world.ledger.post_transfer(

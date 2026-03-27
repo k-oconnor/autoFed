@@ -26,6 +26,9 @@ def load_economy_yaml(path: str | Path) -> WorldState:
 
     goods_cfg = raw.get("goods") or {}
     posted = {gid: float(v["price"]) for gid, v in goods_cfg.items()}
+    good_categories = {
+        gid: str(v.get("category", "normal")) for gid, v in goods_cfg.items()
+    }
 
     inv: dict[str, dict[str, int]] = {}
     recipes: dict[str, FirmRecipe] = {}
@@ -90,6 +93,7 @@ def load_economy_yaml(path: str | Path) -> WorldState:
         inventory=inv,
         employment=employment,
         posted_unit_prices=posted,
+        good_categories=good_categories,
         firm_recipes=recipes,
         taylor=taylor,
         forward_guidance=fg,

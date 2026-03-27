@@ -20,6 +20,8 @@ class WorldState:
     inventory: dict[str, dict[str, int]] = field(default_factory=dict)
     employment: dict[str, str] = field(default_factory=dict)
     posted_unit_prices: dict[str, float] = field(default_factory=dict)
+    # good_id -> category (necessity, normal, luxury, veblen, …) for market priority.
+    good_categories: dict[str, str] = field(default_factory=dict)
     firm_recipes: dict[str, FirmRecipe] = field(default_factory=dict)
     taylor: TaylorParams = field(default_factory=TaylorParams)
     policy_rate: float = 0.05
@@ -137,6 +139,7 @@ def demo_world() -> WorldState:
         inventory={"firm": {"food": 100}},
         employment={"hh_0": "firm", "hh_1": "firm"},
         posted_unit_prices={"food": 10.0},
+        good_categories={"food": "necessity"},
         expectations=ex,
         household_ids=("hh_0", "hh_1"),
         firm_ids=("firm",),

@@ -36,6 +36,7 @@ def build_snapshot(world: WorldState, tick: int) -> dict[str, Any]:
         "prices": prices,
         "expectations": exp,
         "governance_log_tail": list(world.governance_log[-5:]),
+        "good_categories": dict(world.good_categories),
     }
 
 

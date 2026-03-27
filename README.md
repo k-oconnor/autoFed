@@ -8,7 +8,8 @@ Agent-based macro simulation with **stock-flow-consistent** double-entry money. 
 |------|------|
 | `src/autofed/accounting/` | Journal, `Transaction` / `TransactionType`, `BalanceSheet`, `Ledger`, optional `SqliteTransactionLog` |
 | `src/autofed/world/` | `WorldState`, production recipes, Taylor CB params |
-| `src/autofed/engine/` | Phased tick runner (observe → expectations → production → markets → policy → accounting → governance) |
+| `src/autofed/engine/` | Phased tick runner; **goods before wages**; partial wages if firm cash binds |
+| `src/autofed/markets/` | Priority goods clearing (necessity → … → luxury) + rationing |
 | `src/autofed/agents/` | `ManualAgentBackend`, `StubLLMAgentBackend`, `LLMCallBudget`, `ExpectationState` |
 | `src/autofed/social/` | `SocialGraph` (neighbor signals for beliefs) |
 | `src/autofed/config/` | YAML economy loader |
@@ -35,8 +36,10 @@ pip install -e ".[dashboard]"   # streamlit + pandas
 autofed-dashboard               # open sidebar: run dir = out/run (snapshots + transactions)
 ```
 
+**Dashboard `ModuleNotFoundError: autofed`:** Streamlit must use the same environment where the package is installed (`source .venv/bin/activate` then `autofed-dashboard`), *or* run from the repo: `streamlit run src/autofed/observability/dashboard.py` — the script adds `src/` to `sys.path` automatically when it finds your checkout layout.
+
 ## Status
 
-**v0.2.1** — Stock-flow-consistent cash, spec-style `Transaction` log, SQLite persistence hook, YAML economies with multi-firm production, Taylor rule policy rate, social graph + heterogeneous inflation expectations, Monte Carlo runner, banking/equity stubs, CSV export, **Streamlit dashboard** (macro, cash, inventories, prices, transactions) fed by `--export-dir` + `snapshots.jsonl`.
+**v0.2.2** — Adds **priority goods clearing** (YAML `goods.*.category`), **rationing** on stock/cash, **sales before wages**, and **partial wages** when firms are liquidity-constrained (longer runs without hard failures). Plus v0.2.1 dashboard, CI, and SQLite transaction log.
 
 Public repo: [github.com/k-oconnor/autoFed](https://github.com/k-oconnor/autoFed).

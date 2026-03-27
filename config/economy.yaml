@@ -18,9 +18,9 @@ employment:
   hh_0: bakery
   hh_1: bakery
 goods:
-  wheat: { price: 2.0 }
-  flour: { price: 5.0 }
-  bread: { price: 12.0 }
+  wheat: { price: 2.0, category: production_input }
+  flour: { price: 5.0, category: production_input }
+  bread: { price: 12.0, category: necessity }
 firms:
   mill:
     inventory:

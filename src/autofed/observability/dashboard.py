@@ -3,13 +3,34 @@
 from __future__ import annotations
 
 import csv
+import sys
 from collections import defaultdict
 from pathlib import Path
 
-import pandas as pd
-import streamlit as st
 
-from autofed.observability.snapshots import flatten_snapshot_row, read_snapshots_jsonl
+def _prepend_repo_src_to_syspath() -> None:
+    """Allow ``streamlit run .../dashboard.py`` from a git checkout without editable install."""
+    p = Path(__file__).resolve().parent
+    for _ in range(10):
+        if (p / "src" / "autofed").is_dir():
+            src_root = p / "src"
+            if str(src_root) not in sys.path:
+                sys.path.insert(0, str(src_root))
+            return
+        if p.parent == p:
+            break
+        p = p.parent
+
+
+_prepend_repo_src_to_syspath()
+
+import pandas as pd  # noqa: E402
+import streamlit as st  # noqa: E402
+
+from autofed.observability.snapshots import (  # noqa: E402
+    flatten_snapshot_row,
+    read_snapshots_jsonl,
+)
 
 
 def main() -> None:
