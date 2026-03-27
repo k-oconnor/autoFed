@@ -1,18 +1,20 @@
 [project]
 name = "autofed"
-version = "0.1.0"
+version = "0.2.0"
 description = "LLM-driven macro simulation with stock-flow-consistent accounting"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Kevin Quizhpi" }]
-dependencies = []
+dependencies = ["pyyaml>=6.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6.0"]
+dashboard = ["streamlit>=1.28.0"]
 
 [project.scripts]
 autofed = "autofed.cli:main"
+autofed-dashboard = "autofed.observability.dashboard:main"
 
 [build-system]
 requires = ["setuptools>=61", "wheel"]

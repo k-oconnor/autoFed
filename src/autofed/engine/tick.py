@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from autofed.accounting.transaction import TransactionType
 from autofed.agents.backend import AgentBackend
+from autofed.world.production import run_batch_production
 
 if TYPE_CHECKING:
     from autofed.world.state import WorldState
 
 
 class TickEngine:
-    """Runs one deterministic sequence: wages then goods sales (MVP)."""
+    """Phased tick runner aligned with spec §8.1 (subset)."""
 
     __slots__ = ("_backend",)
 
@@ -17,7 +19,21 @@ class TickEngine:
         self._backend = backend
 
     def step(self, world: WorldState, tick: int) -> None:
+        if world.llm_budget is not None:
+            world.llm_budget.reset_tick()
+
+        # 1–2 Observation + expectation formation
+        world.refresh_output_gap()
+        world.update_expectations()
+
+        # 3 Labor market (employment fixed in MVP)
+        # 4 Production
+        run_batch_production(world)
+
+        # 5–7 Pricing + goods + financial (via plan)
         plan = self._backend.plan_tick(world, tick)
+        for pu in plan.price_updates:
+            world.apply_price_updates({pu.good_id: pu.price})
 
         for w in plan.wages:
             world.ledger.post_transfer(
@@ -26,6 +42,7 @@ class TickEngine:
                 w.household_id,
                 w.amount,
                 memo=f"wage {w.household_id}",
+                tx_type=TransactionType.WAGE,
             )
 
         for s in plan.sales:
@@ -36,10 +53,30 @@ class TickEngine:
                 s.seller_id,
                 total,
                 memo=f"purchase {s.good_id} x{s.quantity}",
+                tx_type=TransactionType.PURCHASE,
+                good_id=s.good_id,
             )
             world.add_inventory(s.seller_id, s.good_id, -s.quantity)
 
+        for d in plan.dividends:
+            world.ledger.post_transfer(
+                tick,
+                d.firm_id,
+                d.shareholder_id,
+                d.amount,
+                memo=f"dividend {d.shareholder_id}",
+                tx_type=TransactionType.DIVIDEND,
+            )
+
+        # 8 Policy (rule-based; uses lagged inflation before this tick's price refresh)
+        world.refresh_policy_rate()
+
+        # 9 Accounting validation + price level for next tick
         world.ledger.validate_closed_economy()
+        world.refresh_price_level()
+
+        # 10 Governance
+        world.governance_step(tick)
 
     def run(self, world: WorldState, n_ticks: int, start_tick: int = 0) -> None:
         for t in range(start_tick, start_tick + n_ticks):

@@ -15,12 +15,24 @@ class AgentBackend(Protocol):
 
 
 class ManualAgentBackend:
-    """Deterministic policy for the Phase 0 demo."""
+    """Deterministic policy: legacy single-firm demo or multi-entity from world metadata."""
 
-    __slots__ = ()
+    __slots__ = ("_wage", "_purchase_units", "_consumer_good_priority")
+
+    def __init__(
+        self,
+        wage: float = 50.0,
+        purchase_units: int = 1,
+        consumer_good_priority: tuple[str, ...] = ("bread", "food", "flour"),
+    ) -> None:
+        self._wage = wage
+        self._purchase_units = purchase_units
+        self._consumer_good_priority = consumer_good_priority
 
     def plan_tick(self, world: WorldState, tick: int) -> TickPlan:
         _ = tick
+        if world.household_ids:
+            return self._multi_plan(world)
         firm = "firm"
         food = "food"
         price = world.posted_unit_prices[food]
@@ -34,3 +46,24 @@ class ManualAgentBackend:
                 GoodsSale("hh_1", firm, food, 1, price),
             ),
         )
+
+    def _multi_plan(self, world: WorldState) -> TickPlan:
+        wages: list[WagePayment] = []
+        sales: list[GoodsSale] = []
+        for hh in world.household_ids:
+            firm = world.employment.get(hh)
+            if firm:
+                wages.append(WagePayment(firm, hh, self._wage))
+            good = self._pick_consumer_good(world)
+            if firm and good:
+                price = world.posted_unit_prices[good]
+                sales.append(
+                    GoodsSale(hh, firm, good, self._purchase_units, price),
+                )
+        return TickPlan(wages=tuple(wages), sales=tuple(sales))
+
+    def _pick_consumer_good(self, world: WorldState) -> str | None:
+        for gid in self._consumer_good_priority:
+            if gid in world.posted_unit_prices:
+                return gid
+        return next(iter(world.posted_unit_prices), None)

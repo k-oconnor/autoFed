@@ -1,0 +1,57 @@
+# Sample multi-good supply chain (Phase 2 demo).
+seed: 42
+ticks: 5
+central_bank:
+  taylor:
+    r_star: 0.02
+    pi_star: 0.02
+    phi_pi: 0.5
+    phi_y: 0.25
+  forward_guidance: hawkish tone on price stability
+entities:
+  cb: { cash: -3000 }
+  mill: { cash: 1000 }
+  bakery: { cash: 1000 }
+  hh_0: { cash: 500 }
+  hh_1: { cash: 500 }
+employment:
+  hh_0: bakery
+  hh_1: bakery
+goods:
+  wheat: { price: 2.0 }
+  flour: { price: 5.0 }
+  bread: { price: 12.0 }
+firms:
+  mill:
+    inventory:
+      wheat: 200
+    recipe:
+      output_good: flour
+      output_qty: 10
+      inputs:
+        wheat: 20
+    governance:
+      ceo: ceo_mill
+      board: [b1, b2]
+      evaluate_every_n_ticks: 4
+  bakery:
+    inventory:
+      flour: 80
+    recipe:
+      output_good: bread
+      output_qty: 8
+      inputs:
+        flour: 16
+    governance:
+      ceo: ceo_bakery
+      board: [c1]
+      evaluate_every_n_ticks: 4
+llm:
+  max_calls_per_tick: 50
+banking:
+  enabled: false
+equity:
+  enabled: false
+social:
+  edges:
+    - [hh_0, hh_1]

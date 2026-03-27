@@ -1,0 +1,12 @@
+"""Named tick phases (spec §8.1)."""
+
+OBSERVATION = "observation"
+EXPECTATION_FORMATION = "expectation_formation"
+LABOR_MARKET = "labor_market"
+PRODUCTION = "production"
+PRICING = "pricing"
+GOODS_MARKET = "goods_market"
+FINANCIAL = "financial"
+POLICY = "policy"
+ACCOUNTING = "accounting"
+GOVERNANCE = "governance"

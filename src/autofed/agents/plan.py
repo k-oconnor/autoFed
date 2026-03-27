@@ -20,6 +20,21 @@ class GoodsSale:
 
 
 @dataclass(frozen=True)
+class DividendPayment:
+    firm_id: str
+    shareholder_id: str
+    amount: float
+
+
+@dataclass(frozen=True)
+class PostedPrice:
+    good_id: str
+    price: float
+
+
+@dataclass(frozen=True)
 class TickPlan:
     wages: tuple[WagePayment, ...]
     sales: tuple[GoodsSale, ...]
+    dividends: tuple[DividendPayment, ...] = ()
+    price_updates: tuple[PostedPrice, ...] = ()

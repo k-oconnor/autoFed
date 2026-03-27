@@ -1,26 +1,99 @@
 from __future__ import annotations
 
 import argparse
+import random
+from pathlib import Path
 
 from autofed.agents.backend import ManualAgentBackend
+from autofed.agents.llm_stub import StubLLMAgentBackend
+from autofed.config.loader import load_economy_yaml
 from autofed.engine.tick import TickEngine
-from autofed.world.state import demo_world
+from autofed.monte_carlo import monte_carlo_run
+from autofed.observability.export import export_transactions_csv
+from autofed.world.state import WorldState, demo_world
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="autofed")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    run_p = sub.add_parser("run", help="Run demo simulation for N ticks")
+    run_p = sub.add_parser("run", help="Run simulation for N ticks")
     run_p.add_argument("--ticks", type=int, default=1, help="Number of ticks to simulate")
+    run_p.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="YAML economy config (multi-good / supply chain)",
+    )
+    run_p.add_argument(
+        "--export",
+        type=Path,
+        default=None,
+        help="Write transactions CSV for dashboards",
+    )
+    run_p.add_argument(
+        "--llm-stub",
+        action="store_true",
+        help="Use stub LLM backend (consumes llm_budget from config)",
+    )
+
+    mc = sub.add_parser("monte-carlo", help="Run repeated simulations with different seeds")
+    mc.add_argument("--config", type=Path, required=True)
+    mc.add_argument("--runs", type=int, default=5)
+    mc.add_argument("--ticks", type=int, default=5)
+    mc.add_argument("--base-seed", type=int, default=0)
 
     args = parser.parse_args()
     if args.cmd == "run":
-        world = demo_world()
-        engine = TickEngine(ManualAgentBackend())
+        if args.config:
+            world = load_economy_yaml(args.config)
+        else:
+            world = demo_world()
+        if args.llm_stub:
+            engine = TickEngine(StubLLMAgentBackend(ManualAgentBackend()))
+        else:
+            engine = TickEngine(ManualAgentBackend())
         engine.run(world, args.ticks)
         print("Final cash:", dict(world.ledger.cash))
-        print("Firm food inventory:", world.firm_inventory("firm", "food"))
+        print("Policy rate:", world.policy_rate)
+        print("CPI level:", world.cpi_level)
+        if world.expectations:
+            print(
+                "Mean inflation expectation:",
+                sum(e.inflation_expected for e in world.expectations.values())
+                / len(world.expectations),
+            )
+        if args.export:
+            export_transactions_csv(list(world.ledger.transactions), args.export)
+            print("Wrote", args.export)
+
+    elif args.cmd == "monte-carlo":
+
+        def build(seed: int) -> WorldState:
+            random.seed(seed)
+            w = load_economy_yaml(args.config)
+            for ex in w.expectations.values():
+                ex.inflation_expected += random.uniform(-0.002, 0.002)
+            return w
+
+        def run_engine(world: WorldState, ticks: int) -> None:
+            TickEngine(ManualAgentBackend()).run(world, ticks)
+
+        summaries = monte_carlo_run(
+            build,
+            run_engine,
+            n_runs=args.runs,
+            ticks=args.ticks,
+            base_seed=args.base_seed,
+        )
+        for s in summaries:
+            print(
+                s.seed,
+                f"private_cash={s.final_cash_sum_private:.2f}",
+                f"r={s.policy_rate:.4f}",
+                f"cpi={s.cpi_level:.4f}",
+                f"E_pi={s.inflation_expected_mean}",
+            )
 
 
 if __name__ == "__main__":
