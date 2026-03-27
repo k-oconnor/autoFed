@@ -14,7 +14,7 @@ Agent-based macro simulation with **stock-flow-consistent** double-entry money. 
 | `src/autofed/config/` | YAML economy loader |
 | `src/autofed/banking/` | Optional `BankingLayer` (loans → deposits) |
 | `src/autofed/equity/` | `EquityCapTable` (cash-for-shares) |
-| `src/autofed/observability/` | CSV export; Streamlit dashboard (optional extra) |
+| `src/autofed/observability/` | CSV export, per-tick `snapshots.jsonl`, Streamlit economy dashboard |
 | `config/economy.yaml` | Multi-good supply-chain example |
 | `tests/` | Pytest |
 
@@ -29,11 +29,14 @@ pip install -e ".[dev]"
 pytest -q
 python -m autofed run --ticks 3
 python -m autofed run --config config/economy.yaml --ticks 5 --export out/transactions.csv
+python -m autofed run --config config/economy.yaml --ticks 10 --export-dir out/run
 python -m autofed monte-carlo --config config/economy.yaml --runs 3 --ticks 4
-pip install -e ".[dashboard]"   # optional
-autofed-dashboard               # reads out/transactions.csv by default
+pip install -e ".[dashboard]"   # streamlit + pandas
+autofed-dashboard               # open sidebar: run dir = out/run (snapshots + transactions)
 ```
 
 ## Status
 
-**v0.2** — Stock-flow-consistent cash, spec-style `Transaction` log, SQLite persistence hook, YAML economies with multi-firm production, Taylor rule policy rate, social graph + heterogeneous inflation expectations, Monte Carlo runner, banking/equity stubs, CSV + Streamlit observability.
+**v0.2** — Stock-flow-consistent cash, spec-style `Transaction` log, SQLite persistence hook, YAML economies with multi-firm production, Taylor rule policy rate, social graph + heterogeneous inflation expectations, Monte Carlo runner, banking/equity stubs, CSV export, **Streamlit dashboard** (macro, cash, inventories, prices, transactions) fed by `--export-dir` + `snapshots.jsonl`.
+
+Public repo: [github.com/k-oconnor/autoFed](https://github.com/k-oconnor/autoFed).

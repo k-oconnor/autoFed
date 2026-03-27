@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import random
 from pathlib import Path
+from typing import Any
 
 from autofed.agents.backend import ManualAgentBackend
 from autofed.agents.llm_stub import StubLLMAgentBackend
@@ -10,6 +11,7 @@ from autofed.config.loader import load_economy_yaml
 from autofed.engine.tick import TickEngine
 from autofed.monte_carlo import monte_carlo_run
 from autofed.observability.export import export_transactions_csv
+from autofed.observability.snapshots import build_snapshot, write_snapshots_jsonl
 from autofed.world.state import WorldState, demo_world
 
 
@@ -30,6 +32,12 @@ def main() -> None:
         type=Path,
         default=None,
         help="Write transactions CSV for dashboards",
+    )
+    run_p.add_argument(
+        "--export-dir",
+        type=Path,
+        default=None,
+        help="Write transactions.csv + snapshots.jsonl for the Streamlit dashboard",
     )
     run_p.add_argument(
         "--llm-stub",
@@ -53,7 +61,24 @@ def main() -> None:
             engine = TickEngine(StubLLMAgentBackend(ManualAgentBackend()))
         else:
             engine = TickEngine(ManualAgentBackend())
-        engine.run(world, args.ticks)
+
+        if args.export_dir is not None:
+            args.export_dir.mkdir(parents=True, exist_ok=True)
+            snapshots: list[dict[str, Any]] = []
+            for t in range(args.ticks):
+                engine.step(world, t)
+                snapshots.append(build_snapshot(world, t))
+            tx_path = args.export_dir / "transactions.csv"
+            snap_path = args.export_dir / "snapshots.jsonl"
+            export_transactions_csv(list(world.ledger.transactions), tx_path)
+            write_snapshots_jsonl(snapshots, snap_path)
+            print("Wrote", tx_path, "and", snap_path)
+        else:
+            engine.run(world, args.ticks)
+            if args.export:
+                export_transactions_csv(list(world.ledger.transactions), args.export)
+                print("Wrote", args.export)
+
         print("Final cash:", dict(world.ledger.cash))
         print("Policy rate:", world.policy_rate)
         print("CPI level:", world.cpi_level)
@@ -63,9 +88,6 @@ def main() -> None:
                 sum(e.inflation_expected for e in world.expectations.values())
                 / len(world.expectations),
             )
-        if args.export:
-            export_transactions_csv(list(world.ledger.transactions), args.export)
-            print("Wrote", args.export)
 
     elif args.cmd == "monte-carlo":
 
