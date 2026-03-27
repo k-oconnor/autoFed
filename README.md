@@ -37,6 +37,6 @@ autofed-dashboard               # open sidebar: run dir = out/run (snapshots + t
 
 ## Status
 
-**v0.2** — Stock-flow-consistent cash, spec-style `Transaction` log, SQLite persistence hook, YAML economies with multi-firm production, Taylor rule policy rate, social graph + heterogeneous inflation expectations, Monte Carlo runner, banking/equity stubs, CSV export, **Streamlit dashboard** (macro, cash, inventories, prices, transactions) fed by `--export-dir` + `snapshots.jsonl`.
+**v0.2.1** — Stock-flow-consistent cash, spec-style `Transaction` log, SQLite persistence hook, YAML economies with multi-firm production, Taylor rule policy rate, social graph + heterogeneous inflation expectations, Monte Carlo runner, banking/equity stubs, CSV export, **Streamlit dashboard** (macro, cash, inventories, prices, transactions) fed by `--export-dir` + `snapshots.jsonl`.
 
 Public repo: [github.com/k-oconnor/autoFed](https://github.com/k-oconnor/autoFed).
