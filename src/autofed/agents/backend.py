@@ -34,6 +34,8 @@ class ManualAgentBackend:
         if world.household_ids:
             return self._multi_plan(world)
         firm = "firm"
+        if not world.firm_is_active(firm):
+            return TickPlan()
         food = "food"
         price = world.posted_unit_prices[food]
         return TickPlan(
@@ -47,19 +49,43 @@ class ManualAgentBackend:
             ),
         )
 
+    def _wage_for_household(self, world: WorldState, hh: str) -> float:
+        p = world.persona(hh)
+        mult = 0.88 + 0.24 * (1.0 - p.risk_aversion)
+        if p.goals.primary == "status":
+            mult += 0.05
+        return self._wage * mult
+
+    def _purchase_units_for_household(self, world: WorldState, hh: str, good: str) -> int:
+        p = world.persona(hh)
+        price = float(world.posted_unit_prices.get(good, 0.0))
+        cash = float(world.ledger.cash.get(hh, 0.0))
+        risk_scale = 0.55 + 0.45 * (1.0 - p.risk_aversion)
+        u = max(0, int(round(self._purchase_units * risk_scale)))
+        if p.goals.primary == "growth" and price > 0 and cash >= 2.0 * price * max(1, u):
+            u += 1
+        if p.goals.primary == "stability":
+            u = min(u, self._purchase_units)
+        if p.goals.min_consumption_units is not None:
+            u = max(u, p.goals.min_consumption_units)
+        if price <= 0:
+            return 0
+        max_afford = int(cash // price)
+        return max(0, min(u, max_afford))
+
     def _multi_plan(self, world: WorldState) -> TickPlan:
         wages: list[WagePayment] = []
         sales: list[GoodsSale] = []
         for hh in world.household_ids:
             firm = world.employment.get(hh)
-            if firm:
-                wages.append(WagePayment(firm, hh, self._wage))
+            if firm and world.firm_is_active(firm):
+                wages.append(WagePayment(firm, hh, self._wage_for_household(world, hh)))
             good = self._pick_consumer_good(world)
-            if firm and good:
+            if firm and world.firm_is_active(firm) and good:
                 price = world.posted_unit_prices[good]
-                sales.append(
-                    GoodsSale(hh, firm, good, self._purchase_units, price),
-                )
+                qty = self._purchase_units_for_household(world, hh, good)
+                if qty > 0:
+                    sales.append(GoodsSale(hh, firm, good, qty, price))
         return TickPlan(wages=tuple(wages), sales=tuple(sales))
 
     def _pick_consumer_good(self, world: WorldState) -> str | None:

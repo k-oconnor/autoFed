@@ -7,6 +7,7 @@ from typing import Any
 
 from autofed.agents.backend import ManualAgentBackend
 from autofed.agents.llm_stub import StubLLMAgentBackend
+from autofed.agents.oasis import OasisOpenAIBackend
 from autofed.config.loader import load_economy_yaml
 from autofed.engine.tick import TickEngine
 from autofed.monte_carlo import monte_carlo_run
@@ -44,6 +45,11 @@ def main() -> None:
         action="store_true",
         help="Use stub LLM backend (consumes llm_budget from config)",
     )
+    run_p.add_argument(
+        "--oasis-openai",
+        action="store_true",
+        help="Use OpenAI OASIS backend (requires OPENAI_API_KEY; respects oasis.enabled in YAML)",
+    )
 
     mc = sub.add_parser("monte-carlo", help="Run repeated simulations with different seeds")
     mc.add_argument("--config", type=Path, required=True)
@@ -57,10 +63,17 @@ def main() -> None:
             world = load_economy_yaml(args.config)
         else:
             world = demo_world()
-        if args.llm_stub:
-            engine = TickEngine(StubLLMAgentBackend(ManualAgentBackend()))
+        inner = ManualAgentBackend()
+        if args.oasis_openai:
+            world.oasis.enabled = True
+            engine = TickEngine(OasisOpenAIBackend(inner))
+        elif args.llm_stub:
+            engine = TickEngine(StubLLMAgentBackend(inner))
         else:
-            engine = TickEngine(ManualAgentBackend())
+            if world.oasis.enabled:
+                engine = TickEngine(OasisOpenAIBackend(inner))
+            else:
+                engine = TickEngine(inner)
 
         if args.export_dir is not None:
             args.export_dir.mkdir(parents=True, exist_ok=True)

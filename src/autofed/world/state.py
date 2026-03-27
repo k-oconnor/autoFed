@@ -5,11 +5,15 @@ from dataclasses import dataclass, field
 from autofed.accounting.ledger import Ledger
 from autofed.agents.batching import LLMCallBudget
 from autofed.agents.expectations import ExpectationState
+from autofed.agents.persona import DEFAULT_AGENT_PERSONA, AgentGoals, AgentPersona
 from autofed.banking.layer import BankingLayer
 from autofed.equity.cap_table import EquityCapTable
+from autofed.social.feed import FeedPost
 from autofed.social.graph import SocialGraph
+from autofed.world.oasis_config import OasisConfig
 from autofed.world.central_bank import TaylorParams, policy_rate
 from autofed.world.firm import FirmGovernance, FirmRecipe
+from autofed.world.firm_lifecycle import FirmEntryTemplate, FirmLifecycleParams
 
 
 @dataclass
@@ -33,12 +37,29 @@ class WorldState:
     governance: dict[str, FirmGovernance] = field(default_factory=dict)
     governance_log: list[str] = field(default_factory=list)
     expectations: dict[str, ExpectationState] = field(default_factory=dict)
+    agent_personas: dict[str, AgentPersona] = field(default_factory=dict)
+    social_feed: list[FeedPost] = field(default_factory=list)
+    agent_declared_roles: dict[str, str] = field(default_factory=dict)
+    oasis: OasisConfig = field(default_factory=OasisConfig)
     social_graph: SocialGraph | None = None
     llm_budget: LLMCallBudget | None = None
     banking: BankingLayer | None = None
     equity: EquityCapTable | None = None
     household_ids: tuple[str, ...] = ()
     firm_ids: tuple[str, ...] = ()
+    exited_firm_ids: set[str] = field(default_factory=set)
+    firm_negative_streak: dict[str, int] = field(default_factory=dict)
+    firm_exit_log: list[str] = field(default_factory=list)
+    firm_entry_log: list[str] = field(default_factory=list)
+    lifecycle_params: FirmLifecycleParams = field(default_factory=FirmLifecycleParams)
+    entry_template: FirmEntryTemplate | None = None
+    entrant_seq: int = 0
+
+    def persona(self, agent_id: str) -> AgentPersona:
+        return self.agent_personas.get(agent_id, DEFAULT_AGENT_PERSONA)
+
+    def firm_is_active(self, firm_id: str) -> bool:
+        return firm_id in self.firm_recipes
 
     def firm_inventory(self, firm_id: str, good_id: str) -> int:
         return self.inventory.get(firm_id, {}).get(good_id, 0)
@@ -140,11 +161,35 @@ def demo_world() -> WorldState:
         employment={"hh_0": "firm", "hh_1": "firm"},
         posted_unit_prices={"food": 10.0},
         good_categories={"food": "necessity"},
+        firm_recipes={
+            # Zero-output placeholder so the demo firm counts as active without changing stocks.
+            "firm": FirmRecipe(output_good="food", output_qty=0, inputs={}),
+        },
         expectations=ex,
         household_ids=("hh_0", "hh_1"),
         firm_ids=("firm",),
         governance={
             "firm": FirmGovernance(firm_id="firm", ceo_agent_id="ceo_1", evaluate_every_n_ticks=5)
+        },
+        agent_personas={
+            "hh_0": AgentPersona(
+                role="worker",
+                risk_aversion=0.65,
+                agency=0.2,
+                goals=AgentGoals(primary="stability"),
+            ),
+            "hh_1": AgentPersona(
+                role="entrepreneur",
+                risk_aversion=0.35,
+                agency=0.55,
+                goals=AgentGoals(primary="growth"),
+            ),
+            "ceo_1": AgentPersona(
+                role="manager",
+                risk_aversion=0.5,
+                agency=0.4,
+                goals=AgentGoals(primary="stability"),
+            ),
         },
         forward_guidance="The committee remains data-dependent.",
         social_graph=SocialGraph([("hh_0", "hh_1")]),

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from autofed.accounting.transaction import TransactionType
 from autofed.agents.backend import AgentBackend
 from autofed.markets.clearing import sort_sales_by_market_priority, try_execute_sale
+from autofed.world.firm_lifecycle import lifecycle_end_of_tick
 from autofed.world.production import run_batch_production
 
 if TYPE_CHECKING:
@@ -67,12 +68,16 @@ class TickEngine:
         # 8 Policy (rule-based; uses lagged inflation before this tick's price refresh)
         world.refresh_policy_rate()
 
-        # 9 Accounting validation + price level for next tick
-        world.ledger.validate_closed_economy()
+        # 9 Price level for next tick (uses prices after this tick's plan)
         world.refresh_price_level()
 
         # 10 Governance
         world.governance_step(tick)
+
+        # 11 Firm exit / entry (transfers; must run before closed-economy check)
+        lifecycle_end_of_tick(world, tick)
+
+        world.ledger.validate_closed_economy()
 
     def run(self, world: WorldState, n_ticks: int, start_tick: int = 0) -> None:
         for t in range(start_tick, start_tick + n_ticks):

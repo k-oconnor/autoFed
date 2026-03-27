@@ -21,6 +21,8 @@ def test_build_snapshot_after_tick() -> None:
     assert "cash" in s and "firm" in s["cash"]
     assert "inventory" in s
     assert "policy_rate" in s
+    assert "agent_personas" in s and "hh_0" in s["agent_personas"]
+    assert "social_feed_tail" in s and "good_ids" in s and "agent_declared_roles" in s
 
 
 def test_jsonl_roundtrip() -> None:

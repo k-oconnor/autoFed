@@ -15,3 +15,12 @@ def test_transfer_rejects_overdraft() -> None:
     ledger = Ledger({"x": 10.0, "y": 0.0})
     with pytest.raises(ValueError, match="insufficient cash"):
         ledger.post_transfer(0, "x", "y", 20.0, memo="too much")
+
+
+def test_cb_may_debit_below_zero_closed_economy() -> None:
+    """CB balance is net liabilities; issuance does not require positive cb cash."""
+    ledger = Ledger({"cb": -500.0, "hh_0": 500.0})
+    ledger.post_transfer(0, "cb", "entrant_1", 200.0, memo="startup")
+    assert ledger.cash["cb"] == -700.0
+    assert ledger.cash["entrant_1"] == 200.0
+    ledger.validate_closed_economy()

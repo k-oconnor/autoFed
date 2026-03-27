@@ -15,6 +15,9 @@ class Ledger:
 
     __slots__ = ("_cash", "_entries", "_transactions", "_sqlite")
 
+    #: Payers in this set may debit below zero (central-bank liabilities / issuance).
+    UNBOUNDED_NEGATIVE_ENTITIES: frozenset[str] = frozenset({"cb"})
+
     def __init__(
         self,
         initial_cash: Mapping[str, float] | None = None,
@@ -40,11 +43,16 @@ class Ledger:
         return tuple(self._transactions)
 
     def post(self, entry: JournalEntry) -> None:
-        """Apply a balanced entry; raises if any balance goes negative."""
+        """Apply a balanced entry; raises if any balance goes negative.
+
+        The central bank (``cb``) is exempt: negative balance means outstanding
+        liabilities / inside money, so startup lending and open-market-style
+        funding do not require a positive CB cash stock.
+        """
         for line in entry.lines:
             prev = self._cash.get(line.entity_id, 0.0)
             new = prev + line.delta_cash
-            if new < -1e-9:
+            if line.entity_id not in self.UNBOUNDED_NEGATIVE_ENTITIES and new < -1e-9:
                 raise ValueError(
                     f"insufficient cash for {line.entity_id!r}: {prev} + {line.delta_cash} = {new} "
                     f"({entry.memo!r})"

@@ -8,12 +8,22 @@ build/
 *.egg
 .venv/
 venv/
-.env
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Secrets and local env (never commit real keys)
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+secrets.yaml
+secrets.yml
+*_secret*
+*.key
 
 # IDE
 .idea/
@@ -25,3 +35,6 @@ htmlcov/
 
 # Local exports
 out/
+
+# Editor scratch files (often accidentally contain secrets)
+Untitled

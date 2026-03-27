@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from autofed.agents.persona import persona_to_snapshot_dict
+from autofed.social.feed import feed_post_to_dict
+
 if TYPE_CHECKING:
     from autofed.world.state import WorldState
 
@@ -21,6 +24,7 @@ def build_snapshot(world: WorldState, tick: int) -> dict[str, Any]:
     exp = {aid: float(ex.inflation_expected) for aid, ex in world.expectations.items()}
     mean_exp = sum(exp.values()) / len(exp) if exp else None
     disp = world.expectation_dispersion()
+    active_firms = sorted(world.firm_recipes.keys())
     return {
         "tick": int(tick),
         "policy_rate": float(world.policy_rate),
@@ -37,6 +41,16 @@ def build_snapshot(world: WorldState, tick: int) -> dict[str, Any]:
         "expectations": exp,
         "governance_log_tail": list(world.governance_log[-5:]),
         "good_categories": dict(world.good_categories),
+        "active_firms": active_firms,
+        "exited_firm_ids": sorted(world.exited_firm_ids),
+        "firm_exit_log_tail": list(world.firm_exit_log[-5:]),
+        "firm_entry_log_tail": list(world.firm_entry_log[-5:]),
+        "agent_personas": {
+            aid: persona_to_snapshot_dict(p) for aid, p in sorted(world.agent_personas.items())
+        },
+        "agent_declared_roles": dict(sorted(world.agent_declared_roles.items())),
+        "social_feed_tail": [feed_post_to_dict(p) for p in world.social_feed[-20:]],
+        "good_ids": sorted(world.posted_unit_prices.keys()),
     }
 
 

@@ -48,6 +48,15 @@ firms:
       evaluate_every_n_ticks: 4
 llm:
   max_calls_per_tick: 50
+# OASIS / OpenAI social-economic layer (set enabled: true and export OPENAI_API_KEY)
+# oasis:
+#   enabled: false
+#   model: gpt-4o-mini
+#   feed_max_posts: 200
+#   feed_context_posts: 20
+#   temperature: 0.4
+#   max_new_goods_per_tick: 5
+#   max_good_price: 1000000
 banking:
   enabled: false
 equity:
@@ -55,3 +64,29 @@ equity:
 social:
   edges:
     - [hh_0, hh_1]
+# Optional: role archetypes, risk/ agency, goals for households and governance ids.
+# Uses economy `seed` for stochastic draws unless agent_generation.base_seed is set.
+# agent_generation:
+#   stochastic: true
+# agents:
+#   hh_0: { role: worker }
+#   hh_1: { role: entrepreneur, goals: { primary: growth } }
+#   ceo_bakery: { role: manager }
+# Optional: consecutive ticks with negative net worth (cash + inventory at posted prices) trigger exit;
+# stochastic entry funds new firms from the CB using entry_template.
+# firm_lifecycle:
+#   exit_negative_net_worth_ticks: 0
+#   entry_enabled: false
+#   entry_probability_per_tick: 0.0
+#   entry_max_firms: 100
+#   entry_template:
+#     initial_cash: 200
+#     inventory: { flour: 20 }
+#     recipe:
+#       output_good: bread
+#       output_qty: 4
+#       inputs: { flour: 8 }
+#     governance:
+#       ceo: ceo_entrant
+#       board: []
+#       evaluate_every_n_ticks: 10

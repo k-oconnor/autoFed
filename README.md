@@ -10,8 +10,8 @@ Agent-based macro simulation with **stock-flow-consistent** double-entry money. 
 | `src/autofed/world/` | `WorldState`, production recipes, Taylor CB params |
 | `src/autofed/engine/` | Phased tick runner; **goods before wages**; partial wages if firm cash binds |
 | `src/autofed/markets/` | Priority goods clearing (necessity → … → luxury) + rationing |
-| `src/autofed/agents/` | `ManualAgentBackend`, `StubLLMAgentBackend`, `LLMCallBudget`, `ExpectationState` |
-| `src/autofed/social/` | `SocialGraph` (neighbor signals for beliefs) |
+| `src/autofed/agents/` | `ManualAgentBackend`, `StubLLMAgentBackend`, `OasisOpenAIBackend`, `LLMCallBudget`, `ExpectationState` |
+| `src/autofed/social/` | `SocialGraph`, `FeedPost` / social feed (OASIS-style) |
 | `src/autofed/config/` | YAML economy loader |
 | `src/autofed/banking/` | Optional `BankingLayer` (loans → deposits) |
 | `src/autofed/equity/` | `EquityCapTable` (cash-for-shares) |
@@ -32,6 +32,10 @@ python -m autofed run --ticks 3
 python -m autofed run --config config/economy.yaml --ticks 5 --export out/transactions.csv
 python -m autofed run --config config/economy.yaml --ticks 10 --export-dir out/run
 python -m autofed monte-carlo --config config/economy.yaml --runs 3 --ticks 4
+pip install -e ".[openai]"     # OpenAI client for OASIS backend
+cp .env.example .env            # then set OPENAI_API_KEY in .env (gitignored)
+# Or: export OPENAI_API_KEY=...  # required when oasis.enabled or --oasis-openai
+python -m autofed run --config config/economy.yaml --ticks 1 --oasis-openai
 pip install -e ".[dashboard]"   # streamlit + pandas
 autofed-dashboard               # open sidebar: run dir = out/run (snapshots + transactions)
 ```
